@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Early Church & Eastern Orthodox — Trivia</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--accent:#ffd166;--muted:#9aa4b2;--correct:#1b9a59;--wrong:#d9534f}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071029 0%, #071a2a 100%);color:#e6eef6}
+  .wrap{max-width:900px;margin:18px auto;padding:16px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  h1{font-size:20px;margin:0;letter-spacing:0.5px}
+  .meta{font-size:13px;color:var(--muted)}
+  .card{background:rgba(255,255,255,0.03);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+  .question{font-size:18px;margin:8px 0 12px}
+  .choices{display:grid;gap:10px}
+  button.choice{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:12px 14px;border-radius:10px;text-align:left;font-size:16px;color:inherit}
+  button.choice:active{transform:translateY(1px)}
+  .choice.correct{border-color:rgba(27,154,89,0.9);background:rgba(27,154,89,0.06)}
+  .choice.wrong{border-color:rgba(217,83,79,0.95);background:rgba(217,83,79,0.06)}
+  .footer{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap}
+  .small{font-size:13px;color:var(--muted)}
+  .controls{display:flex;gap:8px}
+  .btn{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;font-weight:600;color:#06202a}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .explain{margin-top:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:14px;color:var(--muted);display:none}
+  .topbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+  .progress{height:8px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden;flex:1}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ff9f1c);width:0%}
+  @media(min-width:600px){h1{font-size:22px} .question{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Early Church & Eastern Orthodox — Trivia</h1>
+      <div class="meta">Mobile-friendly • Multiple choice • Explanations after answers</div>
+    </div>
+    <div class="meta">Session size: <span id="poolSize">1000</span> questions</div>
+  </header>
+
+  <main class="card">
+    <div class="topbar" style="margin-bottom:8px">
+      <div class="pill">Score: <strong id="score">0</strong></div>
+      <div class="pill">Question: <strong id="qIndex">0</strong>/<strong id="qMax">1000</strong></div>
+      <div class="progress" aria-hidden="true"><i id="progBar"></i></div>
+    </div>
+
+    <div id="gameArea">
+      <div id="intro">
+        <p class="small">Choose how many questions you want for this session (up to 1000). The game will draw randomly from a large pool of Early Church & Eastern Orthodox questions across councils, liturgy, saints, doctrine, icons, Byzantine history, and more. Tap an answer to submit; the correct answer and a short explanation will show after each response.</p>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <input id="numInput" type="number" min="5" max="1000" value="50" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:120px;background:transparent;color:inherit">
+          <button id="startBtn" class="btn">Start Session</button>
+          <button id="startFull" class="btn ghost">Start 1000</button>
+        </div>
+      </div>
+
+      <div id="questionCard" style="display:none">
+        <div class="question" id="questionText">Question text</div>
+        <div class="choices" id="choices"></div>
+        <div class="explain" id="explainBox"></div>
+        <div class="footer">
+          <div class="small">Select an answer — you'll see a short explanation after each question.</div>
+          <div class="controls">
+            <button id="nextBtn" class="btn" style="display:none">Next</button>
+            <button id="stopBtn" class="btn ghost">Stop Session</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer style="margin-top:12px;text-align:center;color:var(--muted);font-size:13px">
+    Built for learning — explanations shown after answers. Want categories, timed mode, or export? Ask and I'll add it.
+  </footer>
+</div>
+
+<script>
+// Base question bank (curated). Each object: {q, choices:[], answerIndex, explanation, topic}
+// We'll create a set of ~40 base Qs and then expand programmatically to reach target session size.
+const baseQuestions = [
+{q:"The Eastern Orthodox Church traces its origins to which of the following?", choices:["The Apostles of Jesus Christ","The Protestant Reformation","The Crusades","The Council of Trent"], answer:0, explanation:"Orthodox Christianity traces its lineage to the Apostles and the earliest Christian communities."},
+{q:"What is the primary Sunday Eucharistic service in Eastern Orthodoxy called?", choices:["Divine Liturgy","Mass","Matins","Vespers"], answer:0, explanation:"The main Eucharistic worship service is called the Divine Liturgy."},
+{q:"The event commonly dated to 1054 that formalized the split between East and West is called:", choices:["Great Schism","Reformation","Council of Trent","East–West Dialogue"], answer:0, explanation:"The Great Schism (1054) is the traditional date for the split between Eastern Orthodoxy and Roman Catholicism."},
+{q:"Which ecumenical council (325 AD) affirmed the divinity of Christ and produced the original Nicene Creed?", choices:["First Council of Nicaea","Council of Chalcedon","Council of Ephesus","Second Council of Nicaea"], answer:0, explanation:"The First Council of Nicaea (325) affirmed that the Son is of the same substance (homoousios) as the Father."},
+{q:"Which emperor commissioned the rebuilding of Hagia Sophia completed in 537 AD?", choices:["Justinian I","Heraclius","Constantine XI","Theodosius I"], answer:0, explanation:"Emperor Justinian I commissioned the reconstructed Hagia Sophia, completed in 537 AD."},
+{q:"Icons in Orthodox worship are:", choices:["Venerated as windows to the divine","Forbidden","Worshipped as gods","Used only for decoration"], answer:0, explanation:"Icons are venerated (honored) and used as aids to prayer — they are not worship of the image itself."},
+{q:"What do Orthodox Christians call the major fasting period before Easter?", choices:["Great Lent","Advent","Ramadan","Yom Kippur"], answer:0, explanation:"The major fast before Pascha (Easter) is called Great Lent."},
+{q:"The term 'Patriarch of Constantinople' historically refers to the bishop of which city?", choices:["Constantinople","Rome","Alexandria","Jerusalem"], answer:0, explanation:"The Patriarch of Constantinople is the bishop of Constantinople (modern Istanbul). He is often called 'first among equals' among Orthodox bishops."},
+{q:"Which language was dominant in the Eastern Church in Constantinople?", choices:["Greek","Latin","Coptic","Syriac"], answer:0, explanation:"Greek was the lingua franca of the Eastern Mediterranean and the primary language of theology and worship in Constantinople."},
+{q:"Which council (451) defined that Christ has two natures, human and divine, in one person?", choices:["Council of Chalcedon","First Council of Nicaea","Council of Ephesus","Second Council of Nicaea"], answer:0, explanation:"The Council of Chalcedon (451) defined the two natures of Christ in one person (hypostatic union)."},
+{q:"What is a 'synod' in Orthodox governance?", choices:["A council or assembly of bishops","A single authoritative pope","A monastic rule","A liturgical hymn"], answer:0, explanation:"A synod is an assembly of bishops who govern a local church or make decisions on doctrine and practice."},
+{q:"Which council restored the veneration of icons in 787 AD after the iconoclast controversy?", choices:["Second Council of Nicaea","First Council of Nicaea","Council of Ephesus","Council of Chalcedon"], answer:0, explanation:"The Second Council of Nicaea (787) affirmed the veneration of icons and condemned iconoclasm."},
+{q:"Which feast celebrates the Resurrection of Christ in Orthodoxy?", choices:["Pascha (Easter)","Nativity","Theophany","Transfiguration"], answer:0, explanation:"Pascha (Easter) is the primary feast celebrating Christ's Resurrection."},
+{q:"What is the typical role of the 'priest' in Orthodox parish life?", choices:["Preside at the Divine Liturgy and administer sacraments","Serve as a bishop over other dioceses","Lead only monastic communities","Act as a political leader"], answer:0, explanation:"Priests preside at the Divine Liturgy, offer Eucharist, and administer most sacraments in parish life."},
+{q:"Which council dealt with Nestorianism and emphasized Mary as Theotokos (God-bearer)?", choices:["Council of Ephesus (431)","First Council of Nicaea","Council of Chalcedon","Second Council of Nicaea"], answer:0, explanation:"The Council of Ephesus (431) affirmed Mary as Theotokos, countering Nestorian tendencies."},
+{q:"What does 'Theotokos' mean?", choices:["God-bearer (Mother of God)","Anointed one","Holy Image","Church father"], answer:0, explanation:"Theotokos is Greek for 'God-bearer,' a title for Mary affirmed in early councils."},
+{q:"Which major empire was the most important political context for the Byzantine Church?", choices:["Byzantine (Eastern Roman) Empire","Carolingian Empire","Holy Roman Empire","Persian Empire"], answer:0, explanation:"The Byzantine Empire was the political and cultural context for Eastern Orthodox Christianity for many centuries."},
+{q:"Which of these is a distinctive feature of Orthodox liturgy?", choices:["Extensive use of icons, incense, chant, and liturgical cycles","Minimalist, sermon-only services","Singing only in Latin","No use of incense"], answer:0, explanation:"Orthodox liturgy emphasizes sensory elements like icons, incense, chant, and set liturgical cycles."},
+{q:"Who is considered the 'first among equals' (primus inter pares) among Orthodox bishops historically?", choices:["The Patriarch of Constantinople","The Pope of Rome","The Archbishop of Canterbury","The Patriarch of Moscow"], answer:0, explanation:"Historically the Patriarch of Constantinople was regarded as 'first among equals' among Orthodox patriarchs."},
+{q:"What is 'hesychasm' in Eastern Orthodox spirituality?", choices:["A tradition of contemplative prayer and stillness","A type of icon material","A liturgical vestment","A church building style"], answer:0, explanation:"Hesychasm is a mystical tradition focused on inner stillness and repetitive prayer (e.g., Jesus Prayer)."},
+{q:"Which Christian writer and bishop of Alexandria is known for his allegorical interpretation of Scripture and major early theology?", choices:["Athanasius","Augustine","Anselm","Gregory the Great"], answer:0, explanation:"Athanasius of Alexandria (4th century) was a key defender of Nicene theology and influential theologian."},
+{q:"What phrase summarizes the Nicene teaching about the Son's relation to the Father?", choices:["Homoousios (of the same substance)","Filioque","Sola Scriptura","Extra Ecclesiam Nulla Salus"], answer:0, explanation:"Homoousios means 'of the same substance' and was used at Nicaea to describe the Son as fully divine with the Father."},
+{q:"Which ancient center of Christianity was located in modern-day Turkey and had an important patriarchate?", choices:["Antioch","Canterbury","Milan","Seville"], answer:0, explanation:"Antioch (in modern Turkey/Syria region) was one of the great ancient patriarchates of early Christianity."},
+{q:"What was one major consequence of the iconoclast controversy for Byzantine art?", choices:["Periods of destruction and later revival leading to rich iconographic traditions","Permanent ban on religious art","Shift to Latin-language art","End of mosaic production"], answer:0, explanation:"Iconoclasm led to waves of destruction, followed by restoration and a flourishing of iconographic art after 787."},
+{q:"Which sacrament is central in Orthodox worship and is offered at the Divine Liturgy?", choices:["Eucharist (Holy Communion)","Confirmation only","Last Rites only","None of the above"], answer:0, explanation:"The Eucharist is central and is celebrated in the Divine Liturgy."},
+{q:"What is an 'ecumenical council'?", choices:["A gathering of bishops from across the Christian world to settle major doctrinal issues","A local parish meeting","A gathering of monks only","A secular political assembly"], answer:0, explanation:"Ecumenical councils bring bishops from across the church to decide on doctrine and discipline."},
+{q:"Which early Christian martyr and saint is famous for his theological works defending the Trinity and opposing Arianism?", choices:["Athanasius","Ignatius of Antioch","Polycarp","Justin Martyr"], answer:0, explanation:"Athanasius was a strong opponent of Arianism and defender of Nicene orthodoxy."},
+{q:"What calendar do many Orthodox churches use to calculate Pascha (Easter)?", choices:["Julian calendar or the older Paschalion","Gregorian calendar exclusively","Lunar Islamic calendar","Hebrew calendar only"], answer:0, explanation:"Many Orthodox churches use the Julian calendar (or its Paschalion rules) to calculate Pascha, producing different dates than Western churches."},
+{q:"Which city became the new imperial capital under Emperor Constantine and later the spiritual center of Eastern Christianity?", choices:["Constantinople","Rome","Jerusalem","Alexandria"], answer:0, explanation:"Constantine founded Constantinople (modern Istanbul), which became the Byzantine imperial and ecclesiastical center."},
+{q:"What is 'liturgical chant' in Orthodox worship?", choices:["A sung form of the liturgy using traditional melodies","A spoken sermon","A private reading","A type of fasting"], answer:0, explanation:"Liturgical chant is the sung element of services—psalms, hymns, and responses shaped by tradition."},
+{q:"Which 4th-century theologian wrote 'On the Incarnation' and was bishop of Caesarea?", choices:["Athanasius of Alexandria","Basil the Great","John Chrysostom","Gregory Nazianzen"], answer:0, explanation:"Athanasius wrote 'On the Incarnation' and was influential in Trinitarian theology."},
+{q:"What role do monasteries play in Orthodox tradition?", choices:["Centers of prayer, learning, spiritual formation, and preservation of tradition","Only tourist sites","Political centers only","Places for secular business"], answer:0, explanation:"Monasteries have been vital for prayer life, theology, manuscripts, and spiritual leadership in Orthodoxy."},
+{q:"Which Church Father is famous for the nickname 'Golden-mouthed' (Chrysostom)?", choices:["John Chrysostom","Basil the Great","Athanasius","Cyril of Alexandria"], answer:0, explanation:"John Chrysostom, famed for his eloquence in preaching, is nicknamed 'Chrysostom' meaning 'golden-mouthed.'"},
+{q:"What is 'Paschal' in Orthodox context?", choices:["Relating to Easter and the Resurrection","A monastic rule","A type of icon","A specific hymn book"], answer:0, explanation:"'Paschal' refers to things connected with Pascha (Easter), the Resurrection celebration."},
+{q:"Which practice is common in Orthodox churches concerning saints and icons?", choices:["Lighting candles and offering brief prayers before icons","Formal worship of icons as gods","Avoiding any contact with icons","Collecting icons as antiques only"], answer:0, explanation:"Faithful often light candles, venerate icons, and offer prayers before them—not worship of the image itself."},
+{q:"Which council addressed the heresy of Monophysitism and helped define Christological language in the 5th century?", choices:["Council of Chalcedon","First Council of Nicaea","Council of Ephesus","Second Council of Constantinople"], answer:0, explanation:"The Council of Chalcedon (451) dealt with Monophysitism and affirmed the doctrine of two natures in Christ."},
+{q:"Where would you commonly hear the 'Jesus Prayer' in Orthodox spirituality?", choices:["In private and communal contemplative prayer (hesychasm)","Only in the Divine Liturgy as a set response","As a children's rhyme","In secular celebrations"], answer:0, explanation:"The Jesus Prayer ('Lord Jesus Christ, Son of God, have mercy on me') is used in contemplative prayer practices."},
+{q:"Which element is NOT typical of Orthodox church architecture and worship spaces?", choices:["Central iconostasis separating nave and sanctuary","Statues of saints on pedestals","Mosaics and icons on walls","Dome-centered structures"], answer:1, explanation:"Orthodox churches typically do not use statue pedestals like Western tradition; icons and mosaics are standard instead."},
+];
+
+// Expand pool to reach requested size by creating variants that shuffle choices and lightly rephrase metadata.
+// This keeps factual content intact while allowing many question instances.
+function buildExpandedPool(target){
+  const pool = [];
+  const base = baseQuestions;
+  let id=0;
+  while(pool.length < target){
+    for(let b of base){
+      if(pool.length >= target) break;
+      // create a shallow copy and shuffle choices
+      const choices = b.choices.slice();
+      // remember correct text
+      const correctText = choices[b.answer];
+      // shuffle choices keeping track of index
+      for(let i=choices.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[choices[i],choices[j]]=[choices[j],choices[i]];}
+      const answerIndex = choices.indexOf(correctText);
+      // minor phrasing template: sometimes prefix with "Which of the following..." or "True?" etc.
+      let qText = b.q;
+      if(Math.random() < 0.12){
+        qText = "Which of the following is true? " + b.q;
+      } else if(Math.random() < 0.08){
+        qText = b.q.replace(/Which|What|Who/, (m)=> m + " (choose the best answer)");
+      }
+      pool.push({id: ++id, q:qText, choices:choices, answer:answerIndex, explanation:b.explanation, topic:b.topic||'General'});
+    }
+  }
+  // final shuffle
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool;
+}
+
+// Game state
+let sessionPool = [];
+let sessionIndex = 0;
+let score = 0;
+let sessionSize = 50;
+
+const scoreEl = document.getElementById('score');
+const qIndexEl = document.getElementById('qIndex');
+const qMaxEl = document.getElementById('qMax');
+const progBar = document.getElementById('progBar');
+const questionText = document.getElementById('questionText');
+const choicesEl = document.getElementById('choices');
+const explainBox = document.getElementById('explainBox');
+const questionCard = document.getElementById('questionCard');
+const intro = document.getElementById('intro');
+const startBtn = document.getElementById('startBtn');
+const startFull = document.getElementById('startFull');
+const numInput = document.getElementById('numInput');
+const poolSizeSpan = document.getElementById('poolSize');
+const nextBtn = document.getElementById('nextBtn');
+const stopBtn = document.getElementById('stopBtn');
+
+function startSession(size){
+  sessionSize = Math.max(5, Math.min(1000, size || 50));
+  // build pooled questions up to 1000 for session
+  sessionPool = buildExpandedPool(sessionSize);
+  sessionIndex = 0; score = 0;
+  poolSizeSpan.textContent = sessionSize;
+  qMaxEl.textContent = sessionSize;
+  scoreEl.textContent = score;
+  qIndexEl.textContent = 0;
+  intro.style.display = 'none';
+  questionCard.style.display = '';
+  nextBtn.style.display = 'none';
+  renderQuestion();
+}
+
+function renderQuestion(){
+  if(sessionIndex >= sessionSize){
+    endSession();
+    return;
+  }
+  const item = sessionPool[sessionIndex];
+  questionText.textContent = item.q;
+  choicesEl.innerHTML = '';
+  explainBox.style.display = 'none';
+  explainBox.textContent = '';
+  // create buttons
+  item.choices.forEach((c,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML = `<strong>${String.fromCharCode(65+i)}</strong> — ${c}`;
+    btn.onclick = ()=> handleChoice(i, item, btn);
+    choicesEl.appendChild(btn);
+  });
+  qIndexEl.textContent = sessionIndex+1;
+  const pct = Math.round(((sessionIndex)/sessionSize)*100);
+  progBar.style.width = pct + '%';
+  nextBtn.style.display = 'none';
+}
+
+function handleChoice(index, item, btn){
+  // disable further clicks
+  const all = Array.from(document.querySelectorAll('button.choice'));
+  all.forEach(b=>b.disabled=true);
+  const correct = index === item.answer;
+  if(correct){
+    btn.classList.add('correct');
+    score += 1;
+    scoreEl.textContent = score;
+    explainBox.style.display = '';
+    explainBox.innerHTML = `<strong>Correct.</strong> ${item.explanation}`;
+  } else {
+    btn.classList.add('wrong');
+    // highlight correct one
+    const correctBtn = all[item.answer];
+    if(correctBtn) correctBtn.classList.add('correct');
+    explainBox.style.display = '';
+    explainBox.innerHTML = `<strong>Incorrect.</strong> Correct: <em>${String.fromCharCode(65+item.answer)} — ${item.choices[item.answer]}</em><br><br>${item.explanation}`;
+  }
+  nextBtn.style.display = '';
+}
+
+function nextQuestion(){
+  sessionIndex += 1;
+  renderQuestion();
+}
+
+function endSession(){
+  questionCard.style.display = 'none';
+  intro.style.display = '';
+  intro.querySelector('.small').textContent = `Session finished. Final score: ${score} / ${sessionSize}. You can start a new session.`;
+  progBar.style.width = '100%';
+}
+
+startBtn.addEventListener('click', ()=> startSession(parseInt(numInput.value || 50,10)));
+startFull.addEventListener('click', ()=> { numInput.value = 1000; startSession(1000); });
+nextBtn.addEventListener('click', nextQuestion);
+stopBtn.addEventListener('click', ()=> { if(confirm('Stop session? Your current progress will be shown.')) endSession(); });
+
+// keyboard support (A-D)
+document.addEventListener('keydown', (e)=>{
+  if(questionCard.style.display==='none') return;
+  const key = e.key.toUpperCase();
+  if(['A','B','C','D'].includes(key)){
+    const idx = ['A','B','C','D'].indexOf(key);
+    const btn = document.querySelectorAll('button.choice')[idx];
+    if(btn && !btn.disabled) btn.click();
+  } else if(key==='N'){
+    // next
+    if(nextBtn.style.display !== 'none') nextBtn.click();
+  }
+});
+
+</script>
+</body>
+</html>
